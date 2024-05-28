@@ -4,7 +4,7 @@
   "description": "Class Assignment 2: Monster Mayhem using JavaScript, WebSocket and Concurrency.",
   "main": "index.js",
   "scripts": {
-    "start": "server/index.js"
+    "start": "node server/index.js"
   },
   "keywords": [],
   "author": "",
