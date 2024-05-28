@@ -22,4 +22,12 @@ button {
     height: 100%;
     background-color: lightgray;
     border: 1px solid black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.square img {
+    max-width: 90%;
+    max-height: 90%;
 }

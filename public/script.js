@@ -73,8 +73,9 @@ function renderGrid(grid) {
       const square = document.createElement('div');
       square.className = 'square';
       if (grid && grid[row][col]) {
-        square.textContent = grid[row][col].type[0].toUpperCase();
-        square.style.backgroundColor = getPlayerColor(grid[row][col].playerId);
+        const img = document.createElement('img');
+        img.src = getMonsterImage(grid[row][col].type);
+        square.appendChild(img);
       }
       square.addEventListener('click', () => placeMonster(row, col));
       board.appendChild(square);
@@ -102,8 +103,15 @@ function placeMonster(row, col) {
   }
 }
 
-function getPlayerColor(playerId) {
-  // Assign a color based on playerId for visualization
-  const colors = ['red', 'blue', 'green', 'purple', 'orange'];
-  return colors[playerId.charCodeAt(playerId.length - 1) % colors.length];
+function getMonsterImage(type) {
+  switch (type) {
+    case 'vampire':
+      return 'images/vampire.png';
+    case 'werewolf':
+      return 'images/werewolf.png';
+    case 'ghost':
+      return 'images/ghost.png';
+    default:
+      return '';
+  }
 }
