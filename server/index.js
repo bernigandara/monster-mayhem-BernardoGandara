@@ -55,6 +55,19 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('moveMonster', ({ gameId, playerId, oldRow, oldCol, newRow, newCol, type }) => {
+        console.log('Move monster request received:', gameId, playerId, oldRow, oldCol, newRow, newCol, type);
+        const game = games[gameId];
+        if (game && game.players.includes(playerId)) {
+            // Clear old position
+            game.grid[oldRow][oldCol] = null;
+            // Set new position
+            game.grid[newRow][newCol] = { type, playerId };
+            console.log('Updated grid after move:', game.grid);
+            io.to(gameId).emit('updateGrid', game.grid);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });

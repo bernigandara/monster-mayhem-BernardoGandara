@@ -72,13 +72,26 @@ function renderGrid(grid) {
     for (let col = 0; col < 10; col++) {
       const square = document.createElement('div');
       square.className = 'square';
+      square.dataset.row = row;
+      square.dataset.col = col;
       if (grid && grid[row][col]) {
         const img = document.createElement('img');
         img.src = getMonsterImage(grid[row][col].type);
+        img.draggable = true;
+        img.dataset.row = row;
+        img.dataset.col = col;
+        img.dataset.type = grid[row][col].type;
+        img.dataset.playerId = grid[row][col].playerId;
+        img.addEventListener('dragstart', handleDragStart);
         square.appendChild(img);
         square.style.backgroundColor = getPlayerColor(grid[row][col].playerId);
       }
-      square.addEventListener('click', () => placeMonster(row, col));
+      square.addEventListener('click', () => {
+        console.log('Square clicked:', row, col);
+        placeMonster(row, col);
+      });
+      square.addEventListener('dragover', handleDragOver);
+      square.addEventListener('drop', handleDrop);
       board.appendChild(square);
     }
   }
@@ -101,6 +114,33 @@ function placeMonster(row, col) {
     socket.emit('placeMonster', { gameId, playerId, row, col, type });
   } else {
     alert('Invalid monster type');
+  }
+}
+
+function handleDragStart(event) {
+  const row = event.target.dataset.row;
+  const col = event.target.dataset.col;
+  const type = event.target.dataset.type;
+  const playerId = event.target.dataset.playerId;
+  event.dataTransfer.setData('text/plain', JSON.stringify({ row, col, type, playerId }));
+  console.log('Drag started:', { row, col, type, playerId });
+}
+
+function handleDragOver(event) {
+  event.preventDefault();
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  const data = event.dataTransfer.getData('text/plain');
+  const { row: oldRow, col: oldCol, type, playerId } = JSON.parse(data);
+  const newRow = event.target.dataset.row;
+  const newCol = event.target.dataset.col;
+
+  console.log('Dropped:', { oldRow, oldCol, newRow, newCol, type, playerId });
+
+  if (playerId === playerId) { // Only allow the player who owns the monster to move it
+    socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
   }
 }
 
