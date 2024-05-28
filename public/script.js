@@ -1,6 +1,7 @@
 const socket = io();
 let playerId = null;
 let gameId = null;
+let playerEdge = null;
 
 document.getElementById('registerUser').addEventListener('click', () => {
   const username = document.getElementById('username').value;
@@ -30,20 +31,22 @@ document.getElementById('joinGame').addEventListener('click', () => {
   }
 });
 
-socket.on('gameCreated', ({ gameId: newGameId, gameName }) => {
+socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
   console.log('Game created:', newGameId, gameName);
   alert(`Game "${gameName}" created with ID: ${newGameId}`);
   gameId = newGameId; // Correctly set the gameId
+  playerEdge = edge; // Set player edge
   document.getElementById('homeScreen').style.display = 'none';
   document.getElementById('gameScreen').style.display = 'block';
   document.getElementById('gameInfo').innerText = `Game ID: ${newGameId} (Use this ID to share the game with your friends!)`;
   renderGrid();
 });
 
-socket.on('gameJoined', ({ gameId: joinedGameId, players }) => {
+socket.on('gameJoined', ({ gameId: joinedGameId, players, edge }) => {
   console.log('Game joined:', joinedGameId, players);
   alert(`Joined game with ID: ${joinedGameId}`);
   gameId = joinedGameId; // Correctly set the gameId
+  playerEdge = edge; // Set player edge
   document.getElementById('homeScreen').style.display = 'none';
   document.getElementById('gameScreen').style.display = 'block';
   document.getElementById('gameInfo').innerText = `Game ID: ${joinedGameId} (Use this ID to share the game with your friends!)`;
@@ -88,7 +91,11 @@ function renderGrid(grid) {
       }
       square.addEventListener('click', () => {
         console.log('Square clicked:', row, col);
-        placeMonster(row, col);
+        if (isOnPlayerEdge(row, col)) {
+          placeMonster(row, col);
+        } else {
+          alert('You can only place monsters on your edge!');
+        }
       });
       square.addEventListener('dragover', handleDragOver);
       square.addEventListener('drop', handleDrop);
@@ -142,6 +149,13 @@ function handleDrop(event) {
   if (playerId === playerId) { // Only allow the player who owns the monster to move it
     socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
   }
+}
+
+function isOnPlayerEdge(row, col) {
+  if (playerEdge === 'top' && row === 0) return true;
+  if (playerEdge === 'bottom' && row === 9) return true;
+  // Add more edges if needed for more players
+  return false;
 }
 
 function getMonsterImage(type) {
