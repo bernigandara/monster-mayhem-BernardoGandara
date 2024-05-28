@@ -45,6 +45,16 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('placeMonster', ({ gameId, playerId, row, col, type }) => {
+        console.log('Place monster request received:', gameId, playerId, row, col, type);
+        const game = games[gameId];
+        if (game && game.players.includes(playerId)) {
+            game.grid[row][col] = { type, playerId };
+            console.log('Updated grid:', game.grid);
+            io.to(gameId).emit('updateGrid', game.grid);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
