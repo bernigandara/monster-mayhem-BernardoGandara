@@ -8,7 +8,24 @@
 </head>
 <body>
   <h1>Monster Mayhem</h1>
-  <div id="status">Connecting...</div>
+  <div id="homeScreen">
+    <div>
+      <input type="text" id="username" placeholder="Enter your username">
+      <button id="registerUser">Register User</button>
+    </div>
+    <div>
+      <input type="text" id="gameName" placeholder="Enter Game Name">
+      <button id="createGame">Create Game</button>
+    </div>
+    <div>
+      <input type="text" id="gameId" placeholder="Enter Game ID to join">
+      <button id="joinGame">Join Game</button>
+    </div>
+  </div>
+  <div id="gameScreen" style="display: none;">
+    <div id="board" class="board"></div>
+    <div id="stats" class="stats"></div>
+  </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>
