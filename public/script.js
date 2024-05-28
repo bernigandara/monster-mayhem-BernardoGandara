@@ -76,6 +76,7 @@ function renderGrid(grid) {
         const img = document.createElement('img');
         img.src = getMonsterImage(grid[row][col].type);
         square.appendChild(img);
+        square.style.backgroundColor = getPlayerColor(grid[row][col].playerId);
       }
       square.addEventListener('click', () => placeMonster(row, col));
       board.appendChild(square);
@@ -114,4 +115,16 @@ function getMonsterImage(type) {
     default:
       return '';
   }
+}
+
+function getPlayerColor(playerId) {
+  const colors = {
+    'red': '#FF0000',
+    'blue': '#0000FF',
+    'green': '#008000',
+    'purple': '#800080',
+    'orange': '#FFA500'
+  };
+  const colorKeys = Object.keys(colors);
+  return colors[colorKeys[playerId.charCodeAt(playerId.length - 1) % colorKeys.length]];
 }
