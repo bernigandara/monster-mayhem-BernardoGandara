@@ -30,6 +30,21 @@ io.on('connection', (socket) => {
         updateStats();
     });
 
+    socket.on('joinGame', ({ playerId, gameId }) => {
+        console.log('Join game request received:', playerId, gameId);
+        if (games[gameId]) {
+            games[gameId].players.push(playerId);
+            playerStats[playerId] = playerStats[playerId] || { won: 0, lost: 0 };
+            socket.join(gameId);
+            io.to(gameId).emit('playerJoined', { gameId, players: games[gameId].players });
+            console.log('Player joined game:', playerId, gameId);
+            socket.emit('gameJoined', { gameId, players: games[gameId].players });
+            updateStats();
+        } else {
+            socket.emit('error', 'Game ID not found');
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });

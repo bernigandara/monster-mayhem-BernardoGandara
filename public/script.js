@@ -20,14 +20,38 @@ document.getElementById('createGame').addEventListener('click', () => {
   }
 });
 
+document.getElementById('joinGame').addEventListener('click', () => {
+  const inputGameId = document.getElementById('gameId').value;
+  console.log('Join game button clicked:', playerId, inputGameId);
+  if (playerId && inputGameId) {
+    socket.emit('joinGame', { playerId, gameId: inputGameId });
+  } else {
+    alert('Please register a user and enter a game ID.');
+  }
+});
+
 socket.on('gameCreated', ({ gameId, gameName }) => {
   console.log('Game created:', gameId, gameName);
   alert(`Game "${gameName}" created with ID: ${gameId}`);
   document.getElementById('homeScreen').style.display = 'none';
   document.getElementById('gameScreen').style.display = 'block';
-  // Store the game ID for later use
-  gameId = gameId;
+  document.getElementById('gameInfo').innerText = `Game ID: ${gameId} (Use this ID to share the game with your friends!)`;
   renderGrid();
+});
+
+socket.on('gameJoined', ({ gameId, players }) => {
+  console.log('Game joined:', gameId, players);
+  alert(`Joined game with ID: ${gameId}`);
+  document.getElementById('homeScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+  document.getElementById('gameInfo').innerText = `Game ID: ${gameId} (Use this ID to share the game with your friends!)`;
+  updatePlayers(players);
+  renderGrid();
+});
+
+socket.on('playerJoined', ({ gameId, players }) => {
+  console.log('Player joined game:', gameId, players);
+  updatePlayers(players);
 });
 
 function generatePlayerId(username) {
@@ -44,4 +68,14 @@ function renderGrid() {
       board.appendChild(square);
     }
   }
+}
+
+function updatePlayers(players) {
+  const playersDiv = document.getElementById('players');
+  playersDiv.innerHTML = '<h3>Players:</h3>';
+  players.forEach(player => {
+    const playerElement = document.createElement('div');
+    playerElement.textContent = player;
+    playersDiv.appendChild(playerElement);
+  });
 }
