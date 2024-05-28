@@ -15,6 +15,7 @@ io.on('connection', (socket) => {
     console.log('New client connected');
 
     socket.on('createGame', ({ playerId, gameName }) => {
+        console.log('Create game request received:', playerId, gameName);
         const gameId = generateGameId();
         games[gameId] = {
             id: gameId,
@@ -24,6 +25,7 @@ io.on('connection', (socket) => {
         };
         playerStats[playerId] = playerStats[playerId] || { won: 0, lost: 0 };
         socket.join(gameId);
+        console.log('Game created:', gameId);
         socket.emit('gameCreated', { gameId, gameName });
         updateStats();
     });
