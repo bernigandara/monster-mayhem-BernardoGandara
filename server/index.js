@@ -54,6 +54,7 @@ io.on('connection', (socket) => {
             console.log('Updated grid:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
         }
+        endTurn(gameId);
     });
 
     socket.on('moveMonster', ({ gameId, playerId, oldRow, oldCol, newRow, newCol, type }) => {
@@ -66,8 +67,17 @@ io.on('connection', (socket) => {
             game.grid[newRow][newCol] = { type, playerId };
             console.log('Updated grid after move:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
+            endTurn(gameId);
         }
     });
+
+    function endTurn(gameId) {
+        const game = games[gameId];
+        const currentPlayerIndex = game.players.findIndex(player => player.id === game.currentTurn);
+        const nextPlayerIndex = (currentPlayerIndex + 1) % game.players.length;
+        game.currentTurn = game.players[nextPlayerIndex].id;
+        io.to(gameId).emit('turnChanged', game.currentTurn);
+    }
 
     socket.on('disconnect', () => {
         console.log('Client disconnected');
@@ -80,6 +90,20 @@ io.on('connection', (socket) => {
     function generateGameId() {
         return 'game-' + Math.random().toString(36).substr(2, 9);
     }
+
+    socket.on('endTurn', ({ gameId, playerId }) => {
+        const game = games[gameId];
+        const currentPlayerIndex = game.players.findIndex(player => player.id === playerId);
+        const nextPlayerIndex = (currentPlayerIndex + 1) % game.players.length;
+        game.currentTurn = game.players[nextPlayerIndex].id;
+        io.to(gameId).emit('turnChanged', game.currentTurn);
+    });
+
+    socket.on('turnChanged', (newTurn) => {
+        currentTurn = newTurn;
+        document.getElementById('currentTurn').innerText = `Current Turn: ${newTurn}`;
+      });
+      
 });
 
 server.listen(4001, () => {

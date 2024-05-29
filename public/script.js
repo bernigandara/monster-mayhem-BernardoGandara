@@ -64,6 +64,11 @@ socket.on('updateGrid', (grid) => {
   renderGrid(grid);
 });
 
+socket.on('turnChanged', (newTurn) => {
+  currentTurn = newTurn;
+  document.getElementById('currentTurn').innerText = `Current Turn: ${newTurn}`;
+});
+
 function generatePlayerId(username) {
   return `${username}-${Math.random().toString(36).substr(2, 9)}`;
 }
@@ -119,9 +124,14 @@ function placeMonster(row, col) {
   console.log('Placing monster:', gameId, playerId, row, col, type);
   if (type === 'vampire' || type === 'werewolf' || type === 'ghost') {
     socket.emit('placeMonster', { gameId, playerId, row, col, type });
+    endTurn();
   } else {
     alert('Invalid monster type');
   }
+}
+
+function endTurn() {
+  socket.emit('endTurn', { gameId, playerId });
 }
 
 function handleDragStart(event) {
@@ -138,17 +148,30 @@ function handleDragOver(event) {
 }
 
 function handleDrop(event) {
+  // event.preventDefault();
+  // const data = event.dataTransfer.getData('text/plain');
+  // const { row: oldRow, col: oldCol, type, playerId } = JSON.parse(data);
+  // const newRow = event.target.dataset.row;
+  // const newCol = event.target.dataset.col;
+
+  // console.log('Dropped:', { oldRow, oldCol, newRow, newCol, type, playerId });
+
+  // if (playerId === playerId) { // Only allow the player who owns the monster to move it
+  //   socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
+  // }
   event.preventDefault();
-  const data = event.dataTransfer.getData('text/plain');
-  const { row: oldRow, col: oldCol, type, playerId } = JSON.parse(data);
-  const newRow = event.target.dataset.row;
-  const newCol = event.target.dataset.col;
+    if (currentTurn === playerId) {
+        const data = event.dataTransfer.getData('text/plain');
+        const { row: oldRow, col: oldCol, type, playerId: ownerPlayerId } = JSON.parse(data);
+        const newRow = event.target.dataset.row;
+        const newCol = event.target.dataset.col;
 
-  console.log('Dropped:', { oldRow, oldCol, newRow, newCol, type, playerId });
-
-  if (playerId === playerId) { // Only allow the player who owns the monster to move it
-    socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
-  }
+        if (playerId === ownerPlayerId) {
+            socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
+        }
+    } else {
+        alert('It is not your turn!');
+    }
 }
 
 function isOnPlayerEdge(row, col) {
