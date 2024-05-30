@@ -114,10 +114,11 @@ function updatePlayers(players) {
   playersDiv.innerHTML = '<h3>Players:</h3>';
   players.forEach(player => {
     const playerElement = document.createElement('div');
-    playerElement.textContent = player;
+    playerElement.textContent = `Player ID: ${player.id}, Edge: ${player.edge}`;
     playersDiv.appendChild(playerElement);
   });
 }
+
 
 function placeMonster(row, col) {
   const type = prompt("Enter monster type (vampire, werewolf, ghost):");
