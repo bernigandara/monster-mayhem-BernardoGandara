@@ -14,22 +14,25 @@ document.getElementById('registerUser').addEventListener('click', () => {
 document.getElementById('createGame').addEventListener('click', () => {
   const gameName = document.getElementById('gameName').value;
   console.log('Create game button clicked:', playerId, gameName);
-  if (playerId && gameName) {
+  if (gameName) {
+    playerId = 'player1';
     socket.emit('createGame', { playerId, gameName });
   } else {
-    alert('Please register a user and enter a game name.');
+    alert('Please enter a game name.');
   }
 });
 
 document.getElementById('joinGame').addEventListener('click', () => {
   const inputGameId = document.getElementById('gameId').value;
   console.log('Join game button clicked:', playerId, inputGameId);
-  if (playerId && inputGameId) {
+  if (inputGameId) {
+    playerId = 'player2'; // Assume only two players for simplicity
     socket.emit('joinGame', { playerId, gameId: inputGameId });
   } else {
-    alert('Please register a user and enter a game ID.');
+    alert('Please enter a game ID.');
   }
 });
+
 
 socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
   console.log('Game created:', newGameId, gameName);
@@ -197,12 +200,16 @@ function getMonsterImage(type) {
 
 function getPlayerColor(playerId) {
   const colors = {
-    'red': '#FF0000',
-    'blue': '#0000FF',
-    'green': '#008000',
-    'purple': '#800080',
-    'orange': '#FFA500'
+    'player1': '#008000', // Green
+    'player2': '#FFA500'  // Orange
   };
-  const colorKeys = Object.keys(colors);
-  return colors[colorKeys[playerId.charCodeAt(playerId.length - 1) % colorKeys.length]];
+
+  if (playerId in colors) {
+    return colors[playerId];
+  } else {
+    // Default or additional color logic can go here if you have more than two players
+    const defaultColors = ['#FF0000', '#0000FF', '#800080']; // Red, Blue, Purple
+    return defaultColors[playerId.charCodeAt(playerId.length - 1) % defaultColors.length];
+  }
 }
+
