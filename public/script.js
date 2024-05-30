@@ -78,6 +78,10 @@ socket.on('updateScores', (scores) => {
     updateScores(scores);
 });
 
+socket.on('gameOver', ({ winner }) => {
+    displayGameOver(winner);
+});
+
 function generatePlayerId(username) {
     return `${username}-${Math.random().toString(36).substr(2, 9)}`;
 }
@@ -130,6 +134,17 @@ function updatePlayers(players) {
 function updateScores(scores) {
     document.getElementById('player1Score').innerText = `Player 1: ${scores.player1}`;
     document.getElementById('player2Score').innerText = `Player 2: ${scores.player2}`;
+}
+
+function displayGameOver(winner) {
+    alert(`Game Over! The winner is ${winner}`);
+    document.getElementById('gameScreen').innerHTML += `<h2>Game Over! The winner is ${winner}</h2>`;
+    document.querySelectorAll('.square').forEach(square => {
+        square.removeEventListener('click', placeMonster);
+        square.removeEventListener('dragover', handleDragOver);
+        square.removeEventListener('drop', handleDrop);
+    });
+    document.getElementById('switchTurn').disabled = true; // Disable switch turn button
 }
 
 function placeMonster(row, col) {

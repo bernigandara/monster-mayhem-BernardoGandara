@@ -32,7 +32,7 @@ io.on('connection', (socket) => {
         socket.emit('gameCreated', { gameId, gameName, edge: 'top' });
         updateStats();
     });
-    
+
     socket.on('joinGame', ({ playerId, gameId }) => {
         console.log('Join game request received:', playerId, gameId);
         if (games[gameId]) {
@@ -73,7 +73,13 @@ io.on('connection', (socket) => {
             console.log('Updated grid:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
-            endTurn(gameId);
+
+            // Check for win condition
+            if (scores[gameId][playerId] >= 10) {
+                io.to(gameId).emit('gameOver', { winner: playerId });
+            } else {
+                endTurn(gameId);
+            }
         } else {
             socket.emit('alert', 'It is not your turn!');
         }
@@ -101,7 +107,13 @@ io.on('connection', (socket) => {
             console.log('Updated grid after move:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
-            endTurn(gameId);
+
+            // Check for win condition
+            if (scores[gameId][playerId] >= 10) {
+                io.to(gameId).emit('gameOver', { winner: playerId });
+            } else {
+                endTurn(gameId);
+            }
         } else {
             socket.emit('alert', 'It is not your turn!');
         }
@@ -114,7 +126,7 @@ io.on('connection', (socket) => {
         game.currentTurn = game.players[nextPlayerIndex].id;
         io.to(gameId).emit('turnChanged', game.currentTurn);
     }
-    
+
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
@@ -129,25 +141,25 @@ io.on('connection', (socket) => {
 
     socket.on('endTurn', ({ gameId, playerId }) => {
         endTurn(gameId);
-    });    
+    });
 
     // Additional function to handle confrontations
     function handleConfrontation(gameId, row, col, newMonster) {
         const existingMonster = games[gameId].grid[row][col];
-    
+
         if (existingMonster.playerId === newMonster.playerId) {
             // Both monsters belong to the same player
             return { alert: "That square is occupied by your monster!" };
         }
-    
+
         const confrontationRules = {
             'vampire': { 'werewolf': 'vampire', 'ghost': 'ghost' },
             'werewolf': { 'vampire': 'vampire', 'ghost': 'werewolf' },
             'ghost': { 'vampire': 'ghost', 'werewolf': 'werewolf' }
         };
-    
+
         console.log(`Confrontation: New Monster (${newMonster.type}) vs Existing Monster (${existingMonster.type})`);
-    
+
         if (newMonster.type === existingMonster.type) {
             console.log('Both monsters are of the same type. Both will be removed.');
             scores[gameId][newMonster.playerId]++;
@@ -166,7 +178,7 @@ io.on('connection', (socket) => {
                 return { winner: existingMonster };
             }
         }
-    }    
+    }
 });
 
 server.listen(4001, () => {
