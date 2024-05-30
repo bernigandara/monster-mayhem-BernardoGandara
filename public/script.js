@@ -152,30 +152,19 @@ function handleDragOver(event) {
 }
 
 function handleDrop(event) {
-  // event.preventDefault();
-  // const data = event.dataTransfer.getData('text/plain');
-  // const { row: oldRow, col: oldCol, type, playerId } = JSON.parse(data);
-  // const newRow = event.target.dataset.row;
-  // const newCol = event.target.dataset.col;
-
-  // console.log('Dropped:', { oldRow, oldCol, newRow, newCol, type, playerId });
-
-  // if (playerId === playerId) { // Only allow the player who owns the monster to move it
-  //   socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
-  // }
   event.preventDefault();
-    if (currentTurn === playerId) {
-        const data = event.dataTransfer.getData('text/plain');
-        const { row: oldRow, col: oldCol, type, playerId: ownerPlayerId } = JSON.parse(data);
-        const newRow = event.target.dataset.row;
-        const newCol = event.target.dataset.col;
+  if (currentTurn === playerId) {
+      const data = event.dataTransfer.getData('text/plain');
+      const { row: oldRow, col: oldCol, type, playerId: ownerPlayerId } = JSON.parse(data);
+      const newRow = event.target.dataset.row;
+      const newCol = event.target.dataset.col;
 
-        if (playerId === ownerPlayerId) {
-            socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
-        }
-    } else {
-        alert('It is not your turn!');
-    }
+      if (playerId === ownerPlayerId) {
+          socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
+      }
+  } else {
+      alert('It is not your turn!');
+  }
 }
 
 function isOnPlayerEdge(row, col) {

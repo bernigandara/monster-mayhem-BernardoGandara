@@ -53,21 +53,45 @@ io.on('connection', (socket) => {
         console.log('Place monster request received:', gameId, playerId, row, col, type);
         const game = games[gameId];
         if (game && game.players.some(player => player.id === playerId)) {
-            game.grid[row][col] = { type, playerId };
+            const newMonster = { type, playerId };
+            if (game.grid[row][col]) {
+                const result = handleConfrontation(gameId, row, col, newMonster);
+                if (result.alert) {
+                    socket.emit('alert', result.alert);
+                    return;
+                } else if (result.removeBoth) {
+                    game.grid[row][col] = null;
+                } else {
+                    game.grid[row][col] = result.winner;
+                }
+            } else {
+                game.grid[row][col] = newMonster;
+            }
             console.log('Updated grid:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
+            endTurn(gameId);
         }
-        endTurn(gameId);
     });
 
     socket.on('moveMonster', ({ gameId, playerId, oldRow, oldCol, newRow, newCol, type }) => {
         console.log('Move monster request received:', gameId, playerId, oldRow, oldCol, newRow, newCol, type);
         const game = games[gameId];
         if (game && game.players.some(player => player.id === playerId)) {
-            // Clear old position
+            const newMonster = { type, playerId };
+            if (game.grid[newRow][newCol]) {
+                const result = handleConfrontation(gameId, newRow, newCol, newMonster);
+                if (result.alert) {
+                    socket.emit('alert', result.alert);
+                    return;
+                } else if (result.removeBoth) {
+                    game.grid[newRow][newCol] = null;
+                } else {
+                    game.grid[newRow][newCol] = result.winner;
+                }
+            } else {
+                game.grid[newRow][newCol] = newMonster;
+            }
             game.grid[oldRow][oldCol] = null;
-            // Set new position
-            game.grid[newRow][newCol] = { type, playerId };
             console.log('Updated grid after move:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             endTurn(gameId);
@@ -106,7 +130,41 @@ io.on('connection', (socket) => {
         currentTurn = newTurn;
         document.getElementById('currentTurn').innerText = `Current Turn: ${newTurn}`;
       });
-      
+
+
+    // Additional function to handle confrontations
+    function handleConfrontation(gameId, row, col, newMonster) {
+        const existingMonster = games[gameId].grid[row][col];
+    
+        if (existingMonster.playerId === newMonster.playerId) {
+            // Both monsters belong to the same player
+            return { alert: "That square is occupied by your monster!" };
+        }
+    
+        const confrontationRules = {
+            'vampire': { 'werewolf': 'vampire', 'ghost': 'ghost' },
+            'werewolf': { 'vampire': 'vampire', 'ghost': 'werewolf' },
+            'ghost': { 'vampire': 'ghost', 'werewolf': 'werewolf' }
+        };
+    
+        console.log(`Confrontation: New Monster (${newMonster.type}) vs Existing Monster (${existingMonster.type})`);
+    
+        if (newMonster.type === existingMonster.type) {
+            console.log('Both monsters are of the same type. Both will be removed.');
+            return { removeBoth: true };
+        } else {
+            const winnerType = confrontationRules[newMonster.type][existingMonster.type];
+            console.log(`Winner type based on rules: ${winnerType}`);
+            if (winnerType === newMonster.type) {
+                console.log('New monster wins the confrontation.');
+                return { winner: newMonster };
+            } else {
+                console.log('Existing monster wins the confrontation.');
+                return { winner: existingMonster };
+            }
+        }
+    }    
+        
 });
 
 server.listen(4001, () => {
