@@ -8,6 +8,7 @@ const io = socketIo(server);
 
 let games = {};  // Store game states
 let playerStats = {};  // Store player statistics
+let scores = {}; // Store player scores
 
 app.use(express.static('public'));
 
@@ -25,6 +26,7 @@ io.on('connection', (socket) => {
             currentTurn: 'player1'  // Set the initial turn to player1
         };
         playerStats['player1'] = playerStats['player1'] || { won: 0, lost: 0 };
+        scores[gameId] = { player1: 0, player2: 0 }; // Initialize scores
         socket.join(gameId);
         console.log('Game created:', gameId);
         socket.emit('gameCreated', { gameId, gameName, edge: 'top' });
@@ -49,7 +51,6 @@ io.on('connection', (socket) => {
             socket.emit('error', 'Game ID not found');
         }
     });
-    
 
     socket.on('placeMonster', ({ gameId, playerId, row, col, type }) => {
         console.log('Place monster request received:', gameId, playerId, row, col, type);
@@ -71,6 +72,7 @@ io.on('connection', (socket) => {
             }
             console.log('Updated grid:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
+            io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
             endTurn(gameId);
         } else {
             socket.emit('alert', 'It is not your turn!');
@@ -98,6 +100,7 @@ io.on('connection', (socket) => {
             game.grid[oldRow][oldCol] = null;
             console.log('Updated grid after move:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
+            io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
             endTurn(gameId);
         } else {
             socket.emit('alert', 'It is not your turn!');
@@ -147,20 +150,23 @@ io.on('connection', (socket) => {
     
         if (newMonster.type === existingMonster.type) {
             console.log('Both monsters are of the same type. Both will be removed.');
+            scores[gameId][newMonster.playerId]++;
+            scores[gameId][existingMonster.playerId]++;
             return { removeBoth: true };
         } else {
             const winnerType = confrontationRules[newMonster.type][existingMonster.type];
             console.log(`Winner type based on rules: ${winnerType}`);
             if (winnerType === newMonster.type) {
                 console.log('New monster wins the confrontation.');
+                scores[gameId][newMonster.playerId]++;
                 return { winner: newMonster };
             } else {
                 console.log('Existing monster wins the confrontation.');
+                scores[gameId][existingMonster.playerId]++;
                 return { winner: existingMonster };
             }
         }
     }    
-        
 });
 
 server.listen(4001, () => {

@@ -24,13 +24,17 @@
   </div>
   <div id="gameScreen" style="display: none;">
     <h2 id="gameInfo"></h2>
-    <div id="currentTurn"></div>
     <div id="players"></div>
     <div id="board" class="board"></div>
+    <div id="scores">
+      <h3>Scores:</h3>
+      <p id="player1Score">Player 1: 0</p>
+      <p id="player2Score">Player 2: 0</p>
+    </div>
     <button id="switchTurn">Switch Turn</button>
-
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
+
