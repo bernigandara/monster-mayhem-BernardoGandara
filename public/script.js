@@ -2,6 +2,7 @@ const socket = io();
 let playerId = null;
 let gameId = null;
 let playerEdge = null;
+let currentTurn = null;
 
 document.getElementById('registerUser').addEventListener('click', () => {
   const username = document.getElementById('username').value;
@@ -33,6 +34,10 @@ document.getElementById('joinGame').addEventListener('click', () => {
   }
 });
 
+document.getElementById('switchTurn').addEventListener('click', () => {
+  socket.emit('endTurn', { gameId, playerId });
+});
+
 
 socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
   console.log('Game created:', newGameId, gameName);
@@ -43,6 +48,8 @@ socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
   document.getElementById('gameScreen').style.display = 'block';
   document.getElementById('gameInfo').innerText = `Game ID: ${newGameId} (Use this ID to share the game with your friends!)`;
   renderGrid();
+  document.getElementById('currentTurn').innerText = `Current Turn: player1`; // Set initial turn display
+  currentTurn = 'player1'; // Set initial turn to player1
 });
 
 socket.on('gameJoined', ({ gameId: joinedGameId, players, edge }) => {
@@ -55,6 +62,7 @@ socket.on('gameJoined', ({ gameId: joinedGameId, players, edge }) => {
   document.getElementById('gameInfo').innerText = `Game ID: ${joinedGameId} (Use this ID to share the game with your friends!)`;
   updatePlayers(players);
   renderGrid();
+  socket.emit('requestTurn', gameId); // Request the current turn from the server
 });
 
 socket.on('playerJoined', ({ gameId, players }) => {
@@ -99,10 +107,10 @@ function renderGrid(grid) {
       }
       square.addEventListener('click', () => {
         console.log('Square clicked:', row, col);
-        if (isOnPlayerEdge(row, col)) {
+        if (currentTurn === playerId && isOnPlayerEdge(row, col)) {
           placeMonster(row, col);
         } else {
-          alert('You can only place monsters on your edge!');
+          alert('You can only place monsters on your edge or it is not your turn!');
         }
       });
       square.addEventListener('dragover', handleDragOver);
@@ -121,7 +129,6 @@ function updatePlayers(players) {
     playersDiv.appendChild(playerElement);
   });
 }
-
 
 function placeMonster(row, col) {
   const type = prompt("Enter monster type (vampire, werewolf, ghost):");
@@ -154,16 +161,17 @@ function handleDragOver(event) {
 function handleDrop(event) {
   event.preventDefault();
   if (currentTurn === playerId) {
-      const data = event.dataTransfer.getData('text/plain');
-      const { row: oldRow, col: oldCol, type, playerId: ownerPlayerId } = JSON.parse(data);
-      const newRow = event.target.dataset.row;
-      const newCol = event.target.dataset.col;
+    const data = event.dataTransfer.getData('text/plain');
+    const { row: oldRow, col: oldCol, type, playerId: ownerPlayerId } = JSON.parse(data);
+    const newRow = event.target.dataset.row;
+    const newCol = event.target.dataset.col;
 
-      if (playerId === ownerPlayerId) {
-          socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
-      }
+    if (playerId === ownerPlayerId) {
+      socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
+      endTurn();
+    }
   } else {
-      alert('It is not your turn!');
+    alert('It is not your turn!');
   }
 }
 
@@ -201,4 +209,3 @@ function getPlayerColor(playerId) {
     return defaultColors[playerId.charCodeAt(playerId.length - 1) % defaultColors.length];
   }
 }
-

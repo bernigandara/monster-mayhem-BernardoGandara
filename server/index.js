@@ -21,7 +21,8 @@ io.on('connection', (socket) => {
             id: gameId,
             name: gameName,
             players: [{ id: 'player1', edge: 'top' }],
-            grid: Array(10).fill().map(() => Array(10).fill(null))
+            grid: Array(10).fill().map(() => Array(10).fill(null)),
+            currentTurn: 'player1'  // Set the initial turn to player1
         };
         playerStats['player1'] = playerStats['player1'] || { won: 0, lost: 0 };
         socket.join(gameId);
@@ -42,6 +43,7 @@ io.on('connection', (socket) => {
             io.to(gameId).emit('playerJoined', { gameId, players: games[gameId].players });
             console.log('Player joined game:', newPlayerId, gameId);
             socket.emit('gameJoined', { gameId, players: games[gameId].players, edge });
+            io.to(gameId).emit('turnChanged', games[gameId].currentTurn); // Notify the current turn
             updateStats();
         } else {
             socket.emit('error', 'Game ID not found');
@@ -52,7 +54,7 @@ io.on('connection', (socket) => {
     socket.on('placeMonster', ({ gameId, playerId, row, col, type }) => {
         console.log('Place monster request received:', gameId, playerId, row, col, type);
         const game = games[gameId];
-        if (game && game.players.some(player => player.id === playerId)) {
+        if (game && game.players.some(player => player.id === playerId) && game.currentTurn === playerId) {
             const newMonster = { type, playerId };
             if (game.grid[row][col]) {
                 const result = handleConfrontation(gameId, row, col, newMonster);
@@ -70,13 +72,15 @@ io.on('connection', (socket) => {
             console.log('Updated grid:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             endTurn(gameId);
+        } else {
+            socket.emit('alert', 'It is not your turn!');
         }
     });
 
     socket.on('moveMonster', ({ gameId, playerId, oldRow, oldCol, newRow, newCol, type }) => {
         console.log('Move monster request received:', gameId, playerId, oldRow, oldCol, newRow, newCol, type);
         const game = games[gameId];
-        if (game && game.players.some(player => player.id === playerId)) {
+        if (game && game.players.some(player => player.id === playerId) && game.currentTurn === playerId) {
             const newMonster = { type, playerId };
             if (game.grid[newRow][newCol]) {
                 const result = handleConfrontation(gameId, newRow, newCol, newMonster);
@@ -95,6 +99,8 @@ io.on('connection', (socket) => {
             console.log('Updated grid after move:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             endTurn(gameId);
+        } else {
+            socket.emit('alert', 'It is not your turn!');
         }
     });
 
@@ -105,7 +111,7 @@ io.on('connection', (socket) => {
         game.currentTurn = game.players[nextPlayerIndex].id;
         io.to(gameId).emit('turnChanged', game.currentTurn);
     }
-
+    
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
@@ -119,18 +125,8 @@ io.on('connection', (socket) => {
     }
 
     socket.on('endTurn', ({ gameId, playerId }) => {
-        const game = games[gameId];
-        const currentPlayerIndex = game.players.findIndex(player => player.id === playerId);
-        const nextPlayerIndex = (currentPlayerIndex + 1) % game.players.length;
-        game.currentTurn = game.players[nextPlayerIndex].id;
-        io.to(gameId).emit('turnChanged', game.currentTurn);
-    });
-
-    socket.on('turnChanged', (newTurn) => {
-        currentTurn = newTurn;
-        document.getElementById('currentTurn').innerText = `Current Turn: ${newTurn}`;
-      });
-
+        endTurn(gameId);
+    });    
 
     // Additional function to handle confrontations
     function handleConfrontation(gameId, row, col, newMonster) {
