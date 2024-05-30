@@ -174,21 +174,31 @@ function handleDragOver(event) {
 }
 
 function handleDrop(event) {
-    event.preventDefault();
-    if (currentTurn === playerId) {
-        const data = event.dataTransfer.getData('text/plain');
-        const { row: oldRow, col: oldCol, type, playerId: ownerPlayerId } = JSON.parse(data);
-        const newRow = event.target.dataset.row;
-        const newCol = event.target.dataset.col;
+  event.preventDefault();
+  if (currentTurn === playerId) {
+      const data = event.dataTransfer.getData('text/plain');
+      const { row: oldRow, col: oldCol, type, playerId: ownerPlayerId } = JSON.parse(data);
+      const newRow = parseInt(event.target.dataset.row);
+      const newCol = parseInt(event.target.dataset.col);
 
-        if (playerId === ownerPlayerId) {
-            socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
-            endTurn();
-        }
-    } else {
-        alert('It is not your turn!');
-    }
+      if (playerId === ownerPlayerId) {
+          // Calculate the difference in rows and columns
+          const rowDiff = Math.abs(newRow - oldRow);
+          const colDiff = Math.abs(newCol - oldCol);
+
+          // Check if the move is valid
+          if ((rowDiff === 0 && colDiff > 0) || (colDiff === 0 && rowDiff > 0) || (rowDiff <= 2 && colDiff <= 2)) {
+              socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
+              endTurn();
+          } else {
+              alert('Invalid move! Monsters can only move freely vertically and horizontally, or exactly two squares diagonally.');
+          }
+      }
+  } else {
+      alert('It is not your turn!');
+  }
 }
+
 
 function isOnPlayerEdge(row, col) {
     if (playerEdge === 'top' && row === 0) return true;
