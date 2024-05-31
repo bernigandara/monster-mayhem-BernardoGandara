@@ -17,7 +17,7 @@ io.on('connection', (socket) => {
 
     socket.on('createGame', ({ playerId, gameName }) => {
         console.log('Create game request received:', playerId, gameName);
-        const gameId = generateGameId();
+        const gameId = generateGameId(gameName);
         games[gameId] = {
             id: gameId,
             name: gameName,
@@ -135,8 +135,9 @@ io.on('connection', (socket) => {
         io.emit('updateStats', playerStats);
     }
 
-    function generateGameId() {
-        return 'game-' + Math.random().toString(36).substr(2, 9);
+    function generateGameId(gameName) {
+        const randomCode = Math.random().toString(36).substr(2, 9);
+        return `${gameName}-${randomCode}`;
     }
 
     socket.on('endTurn', ({ gameId, playerId }) => {

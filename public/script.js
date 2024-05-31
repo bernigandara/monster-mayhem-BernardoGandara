@@ -45,6 +45,7 @@ socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
     renderGrid();
     currentTurn = 'player1';
     document.getElementById('currentTurn').innerText = `Current Turn: player1`;
+    document.getElementById('currentTurnDisplay').innerText = `Turn: player1`; // Update turn display
     updateScores({ player1: 0, player2: 0 }); // Reset scores
 });
 
@@ -56,7 +57,7 @@ socket.on('gameJoined', ({ gameId: joinedGameId, players, edge }) => {
     document.getElementById('gameInfo').innerText = `Game ID: ${joinedGameId} (Use this ID to share the game with your friends!)`;
     updatePlayers(players);
     renderGrid();
-    socket.emit('requestTurn', gameId);
+    socket.emit('requestTurn', gameId); // Request the current turn from the server
     updateScores({ player1: 0, player2: 0 }); // Reset scores
 });
 
@@ -72,6 +73,7 @@ socket.on('updateGrid', (grid) => {
 socket.on('turnChanged', (newTurn) => {
     currentTurn = newTurn;
     document.getElementById('currentTurn').innerText = `Current Turn: ${newTurn}`;
+    document.getElementById('currentTurnDisplay').innerText = `Turn: ${newTurn}`; // Update turn display
 });
 
 socket.on('updateScores', (scores) => {
@@ -174,31 +176,30 @@ function handleDragOver(event) {
 }
 
 function handleDrop(event) {
-  event.preventDefault();
-  if (currentTurn === playerId) {
-      const data = event.dataTransfer.getData('text/plain');
-      const { row: oldRow, col: oldCol, type, playerId: ownerPlayerId } = JSON.parse(data);
-      const newRow = parseInt(event.target.dataset.row);
-      const newCol = parseInt(event.target.dataset.col);
+    event.preventDefault();
+    if (currentTurn === playerId) {
+        const data = event.dataTransfer.getData('text/plain');
+        const { row: oldRow, col: oldCol, type, playerId: ownerPlayerId } = JSON.parse(data);
+        const newRow = parseInt(event.target.dataset.row);
+        const newCol = parseInt(event.target.dataset.col);
 
-      if (playerId === ownerPlayerId) {
-          // Calculate the difference in rows and columns
-          const rowDiff = Math.abs(newRow - oldRow);
-          const colDiff = Math.abs(newCol - oldCol);
+        if (playerId === ownerPlayerId) {
+            // Calculate the difference in rows and columns
+            const rowDiff = Math.abs(newRow - oldRow);
+            const colDiff = Math.abs(newCol - oldCol);
 
-          // Check if the move is valid
-          if ((rowDiff === 0 && colDiff > 0) || (colDiff === 0 && rowDiff > 0) || (rowDiff <= 2 && colDiff <= 2)) {
-              socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
-              endTurn();
-          } else {
-              alert('Invalid move! Monsters can only move freely vertically and horizontally, or exactly two squares diagonally.');
-          }
-      }
-  } else {
-      alert('It is not your turn!');
-  }
+            // Check if the move is valid
+            if ((rowDiff === 0 && colDiff > 0) || (colDiff === 0 && rowDiff > 0) || (rowDiff <= 2 && colDiff <= 2)) {
+                socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
+                endTurn();
+            } else {
+                alert('Invalid move! Monsters can only move freely vertically and horizontally, or exactly two squares diagonally.');
+            }
+        }
+    } else {
+        alert('It is not your turn!');
+    }
 }
-
 
 function isOnPlayerEdge(row, col) {
     if (playerEdge === 'top' && row === 0) return true;
