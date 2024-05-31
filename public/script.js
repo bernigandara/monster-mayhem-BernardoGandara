@@ -28,19 +28,21 @@ document.getElementById('createGame').addEventListener('click', () => {
 document.getElementById('joinGame').addEventListener('click', () => {
     const inputGameId = document.getElementById('gameId').value;
     if (inputGameId) {
-        playerId = 'player2'; // Assume only two players for simplicity
+        const playerNumber = prompt("Enter player number (1-4):");
+        playerId = `player${playerNumber}`; // Adjust player ID based on input
         socket.emit('joinGame', { playerId, gameId: inputGameId });
     } else {
         alert('Please enter a game ID.');
     }
 });
 
-//Emit an event to end the current turn
-document.getElementById('switchTurn').addEventListener('click', () => {
-    socket.emit('endTurn', { gameId, playerId });
-});
 
-//Handle the 'gameCreated' event from the server
+//Emit an event to end the current turn
+// document.getElementById('switchTurn').addEventListener('click', () => {
+//     socket.emit('endTurn', { gameId, playerId });
+// });
+
+// Handle the 'gameCreated' event from the server
 socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
     gameId = newGameId;
     playerEdge = edge;
@@ -49,12 +51,18 @@ socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
     document.getElementById('gameInfo').innerText = `Game ID: ${newGameId} (Use this ID to share the game with your friends!)`;
     renderGrid();
     currentTurn = 'player1';
-    document.getElementById('currentTurn').innerText = `Current Turn: player1`;
-    document.getElementById('currentTurnDisplay').innerText = `Turn: player1`; // Update turn display
-    updateScores({ player1: 0, player2: 0 }); // Reset scores
+    const currentTurnElement = document.getElementById('currentTurn');
+    const currentTurnDisplayElement = document.getElementById('currentTurnDisplay');
+    if (currentTurnElement) {
+        currentTurnElement.innerText = `Current Turn: player1`;
+    }
+    if (currentTurnDisplayElement) {
+        currentTurnDisplayElement.innerText = `Turn: player1`;
+    }
+    updateScores({ player1: 0, player2: 0, player3: 0, player4: 0 }); // Reset scores
 });
 
-//Handle the 'gameJoined' event from the server
+// Handle the 'gameJoined' event from the server
 socket.on('gameJoined', ({ gameId: joinedGameId, players, edge }) => {
     gameId = joinedGameId;
     playerEdge = edge;
@@ -64,7 +72,7 @@ socket.on('gameJoined', ({ gameId: joinedGameId, players, edge }) => {
     updatePlayers(players);
     renderGrid();
     socket.emit('requestTurn', gameId); // Request the current turn from the server
-    updateScores({ player1: 0, player2: 0 }); // Reset scores
+    updateScores({ player1: 0, player2: 0, player3: 0, player4: 0 }); // Reset scores
 });
 
 //Update player list when a new player joins the game
@@ -78,12 +86,20 @@ socket.on('updateGrid', (grid) => {
     renderGrid(grid);
 });
 
-//Handles the turn change event
+// Handle the turn change event
 socket.on('turnChanged', (newTurn) => {
     currentTurn = newTurn;
-    document.getElementById('currentTurn').innerText = `Current Turn: ${newTurn}`;
-    document.getElementById('currentTurnDisplay').innerText = `Turn: ${newTurn}`; // Update turn display
+    const currentTurnElement = document.getElementById('currentTurn');
+    const currentTurnDisplayElement = document.getElementById('currentTurnDisplay');
+    if (currentTurnElement) {
+        currentTurnElement.innerText = `Current Turn: ${newTurn}`;
+    }
+    if (currentTurnDisplayElement) {
+        currentTurnDisplayElement.innerText = `Turn: ${newTurn}`;
+    }
+    alert(`Turn switched! Now playing: ${newTurn}`);
 });
+
 
 //Update the scores
 socket.on('updateScores', (scores) => {
@@ -123,12 +139,12 @@ function renderGrid(grid) {
                 square.style.backgroundColor = getPlayerColor(grid[row][col].playerId);
             }
             square.addEventListener('click', () => {
-                if (currentTurn === playerId && isOnPlayerEdge(row, col)) {
+                if (currentTurn === playerId && isOnPlayerEdge(playerEdge, row, col)) {
                     placeMonster(row, col);
                 } else {
                     alert('You can only place monsters on your edge or it is not your turn!');
                 }
-            });
+            });            
             square.addEventListener('dragover', handleDragOver);
             square.addEventListener('drop', handleDrop);
             board.appendChild(square);
@@ -166,11 +182,11 @@ function displayGameOver(winner) {
 }
 
 //Prompts the user to place a monster on the board
+//Prompts the user to place a monster on the board
 function placeMonster(row, col) {
     const type = prompt("Enter monster type (vampire, werewolf, ghost):");
     if (type === 'vampire' || type === 'werewolf' || type === 'ghost') {
         socket.emit('placeMonster', { gameId, playerId, row, col, type });
-        endTurn();
     } else {
         alert('Invalid monster type');
     }
@@ -195,7 +211,7 @@ function handleDragOver(event) {
     event.preventDefault();
 }
 
-//Handle the drop event for a monster
+// Handle the drop event for a monster
 function handleDrop(event) {
     event.preventDefault();
     if (currentTurn === playerId) {
@@ -212,7 +228,6 @@ function handleDrop(event) {
             // Check if the move is valid
             if ((rowDiff === 0 && colDiff > 0) || (colDiff === 0 && rowDiff > 0) || (rowDiff <= 2 && colDiff <= 2)) {
                 socket.emit('moveMonster', { gameId, playerId, oldRow, oldCol, newRow, newCol, type });
-                endTurn();
             } else {
                 alert('Invalid move! Monsters can only move freely vertically and horizontally, or exactly two squares diagonally.');
             }
@@ -223,11 +238,16 @@ function handleDrop(event) {
 }
 
 //Check if the square is on the player's edge
-function isOnPlayerEdge(row, col) {
-    if (playerEdge === 'top' && row === 0) return true;
-    if (playerEdge === 'bottom' && row === 9) return true;
+function isOnPlayerEdge(playerEdge, row, col) {
+    if ((playerEdge === 'top' && row === 0) ||
+        (playerEdge === 'bottom' && row === 9) ||
+        (playerEdge === 'left' && col === 0) ||
+        (playerEdge === 'right' && col === 9)) {
+        return true;
+    }
     return false;
 }
+
 
 //Returns image path for the given monster type
 function getMonsterImage(type) {

@@ -39,8 +39,27 @@ io.on('connection', (socket) => {
         console.log('Join game request received:', playerId, gameId);
         if (games[gameId]) {
             const playerNumber = games[gameId].players.length + 1;
-            const edge = playerNumber === 2 ? 'bottom' : null; // Add more logic for additional players
-            const newPlayerId = playerNumber === 2 ? 'player2' : playerId;
+            let edge;
+            let newPlayerId;
+    
+            switch (playerNumber) {
+                case 2:
+                    edge = 'bottom';
+                    newPlayerId = 'player2';
+                    break;
+                case 3:
+                    edge = 'left';
+                    newPlayerId = 'player3';
+                    break;
+                case 4:
+                    edge = 'right';
+                    newPlayerId = 'player4';
+                    break;
+                default:
+                    socket.emit('error', 'Game is full');
+                    return;
+            }
+    
             games[gameId].players.push({ id: newPlayerId, edge });
             playerStats[newPlayerId] = playerStats[newPlayerId] || { won: 0, lost: 0 };
             socket.join(gameId);
@@ -53,6 +72,7 @@ io.on('connection', (socket) => {
             socket.emit('error', 'Game ID not found');
         }
     });
+    
 
     //Handle a player placing a monster on the grid
     socket.on('placeMonster', ({ gameId, playerId, row, col, type }) => {
@@ -76,17 +96,17 @@ io.on('connection', (socket) => {
             console.log('Updated grid:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
-
+    
             // Check for win condition
             if (scores[gameId][playerId] >= 10) {
                 io.to(gameId).emit('gameOver', { winner: playerId });
             } else {
-                endTurn(gameId);
+                endTurn(gameId);  // Automatically end the turn
             }
         } else {
             socket.emit('alert', 'It is not your turn!');
         }
-    });
+    });    
 
     //Handle moving a monster on the grid
     socket.on('moveMonster', ({ gameId, playerId, oldRow, oldCol, newRow, newCol, type }) => {
@@ -111,26 +131,29 @@ io.on('connection', (socket) => {
             console.log('Updated grid after move:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
-
+    
             // Check for win condition
             if (scores[gameId][playerId] >= 10) {
                 io.to(gameId).emit('gameOver', { winner: playerId });
             } else {
-                endTurn(gameId);
+                endTurn(gameId);  // Automatically end the turn
             }
         } else {
             socket.emit('alert', 'It is not your turn!');
         }
-    });
+    });    
 
+    //Handle ending the current turn and switching to the next player
     //Handle ending the current turn and switching to the next player
     function endTurn(gameId) {
         const game = games[gameId];
         const currentPlayerIndex = game.players.findIndex(player => player.id === game.currentTurn);
         const nextPlayerIndex = (currentPlayerIndex + 1) % game.players.length;
         game.currentTurn = game.players[nextPlayerIndex].id;
+        console.log(`Turn changed: ${game.currentTurn}`);  // Add this line
         io.to(gameId).emit('turnChanged', game.currentTurn);
     }
+
 
     //Handle client disconnection
     socket.on('disconnect', () => {
