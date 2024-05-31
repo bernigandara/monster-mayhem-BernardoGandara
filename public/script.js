@@ -4,6 +4,7 @@ let gameId = null;
 let playerEdge = null;
 let currentTurn = null;
 
+//Register a new user and generate a playerID
 document.getElementById('registerUser').addEventListener('click', () => {
     const username = document.getElementById('username').value;
     if (username) {
@@ -12,6 +13,7 @@ document.getElementById('registerUser').addEventListener('click', () => {
     }
 });
 
+//Create new game using user input for game name
 document.getElementById('createGame').addEventListener('click', () => {
     const gameName = document.getElementById('gameName').value;
     if (gameName) {
@@ -22,6 +24,7 @@ document.getElementById('createGame').addEventListener('click', () => {
     }
 });
 
+//Join an existing game with the provided gameID
 document.getElementById('joinGame').addEventListener('click', () => {
     const inputGameId = document.getElementById('gameId').value;
     if (inputGameId) {
@@ -32,10 +35,12 @@ document.getElementById('joinGame').addEventListener('click', () => {
     }
 });
 
+//Emit an event to end the current turn
 document.getElementById('switchTurn').addEventListener('click', () => {
     socket.emit('endTurn', { gameId, playerId });
 });
 
+//Handle the 'gameCreated' event from the server
 socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
     gameId = newGameId;
     playerEdge = edge;
@@ -49,6 +54,7 @@ socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
     updateScores({ player1: 0, player2: 0 }); // Reset scores
 });
 
+//Handle the 'gameJoined' event from the server
 socket.on('gameJoined', ({ gameId: joinedGameId, players, edge }) => {
     gameId = joinedGameId;
     playerEdge = edge;
@@ -61,33 +67,40 @@ socket.on('gameJoined', ({ gameId: joinedGameId, players, edge }) => {
     updateScores({ player1: 0, player2: 0 }); // Reset scores
 });
 
+//Update player list when a new player joins the game
 socket.on('playerJoined', ({ gameId, players }) => {
     updatePlayers(players);
     updateScores(scores);
 });
 
+//update the game grid
 socket.on('updateGrid', (grid) => {
     renderGrid(grid);
 });
 
+//Handles the turn change event
 socket.on('turnChanged', (newTurn) => {
     currentTurn = newTurn;
     document.getElementById('currentTurn').innerText = `Current Turn: ${newTurn}`;
     document.getElementById('currentTurnDisplay').innerText = `Turn: ${newTurn}`; // Update turn display
 });
 
+//Update the scores
 socket.on('updateScores', (scores) => {
     updateScores(scores);
 });
 
+//Handles the game over event
 socket.on('gameOver', ({ winner }) => {
     displayGameOver(winner);
 });
 
+//Generates a unique paler ID using the username
 function generatePlayerId(username) {
     return `${username}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
+//Render the game grid on the board
 function renderGrid(grid) {
     const board = document.getElementById('board');
     board.innerHTML = ''; // Clear the board
@@ -123,6 +136,7 @@ function renderGrid(grid) {
     }
 }
 
+//Updates the player list
 function updatePlayers(players) {
     const playersDiv = document.getElementById('players');
     playersDiv.innerHTML = '<h3>Players:</h3>';
@@ -133,11 +147,13 @@ function updatePlayers(players) {
     });
 }
 
+//Update the score display
 function updateScores(scores) {
     document.getElementById('player1Score').innerText = `Player 1: ${scores.player1}`;
     document.getElementById('player2Score').innerText = `Player 2: ${scores.player2}`;
 }
 
+//Display game over message
 function displayGameOver(winner) {
     alert(`Game Over! The winner is ${winner}`);
     document.getElementById('gameScreen').innerHTML += `<h2>Game Over! The winner is ${winner}</h2>`;
@@ -149,6 +165,7 @@ function displayGameOver(winner) {
     document.getElementById('switchTurn').disabled = true; // Disable switch turn button
 }
 
+//Prompts the user to place a monster on the board
 function placeMonster(row, col) {
     const type = prompt("Enter monster type (vampire, werewolf, ghost):");
     if (type === 'vampire' || type === 'werewolf' || type === 'ghost') {
@@ -159,10 +176,12 @@ function placeMonster(row, col) {
     }
 }
 
+//Emits event ot end the current turn
 function endTurn() {
     socket.emit('endTurn', { gameId, playerId });
 }
 
+//Handles the drag start event for a monster
 function handleDragStart(event) {
     const row = event.target.dataset.row;
     const col = event.target.dataset.col;
@@ -171,10 +190,12 @@ function handleDragStart(event) {
     event.dataTransfer.setData('text/plain', JSON.stringify({ row, col, type, playerId }));
 }
 
+//Handles the dar over event allowing dropping
 function handleDragOver(event) {
     event.preventDefault();
 }
 
+//Handle the drop event for a monster
 function handleDrop(event) {
     event.preventDefault();
     if (currentTurn === playerId) {
@@ -201,12 +222,14 @@ function handleDrop(event) {
     }
 }
 
+//Check if the square is on the player's edge
 function isOnPlayerEdge(row, col) {
     if (playerEdge === 'top' && row === 0) return true;
     if (playerEdge === 'bottom' && row === 9) return true;
     return false;
 }
 
+//Returns image path for the given monster type
 function getMonsterImage(type) {
     switch (type) {
         case 'vampire':
@@ -220,6 +243,7 @@ function getMonsterImage(type) {
     }
 }
 
+//Returns the colour for the given player ID
 function getPlayerColor(playerId) {
     const colors = {
         'player1': '#008000', // Green

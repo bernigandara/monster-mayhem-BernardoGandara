@@ -15,6 +15,7 @@ app.use(express.static('public'));
 io.on('connection', (socket) => {
     console.log('New client connected');
 
+    //Handle the creation of a new game
     socket.on('createGame', ({ playerId, gameName }) => {
         console.log('Create game request received:', playerId, gameName);
         const gameId = generateGameId(gameName);
@@ -33,6 +34,7 @@ io.on('connection', (socket) => {
         updateStats();
     });
 
+    //Handle a player joining an existing game
     socket.on('joinGame', ({ playerId, gameId }) => {
         console.log('Join game request received:', playerId, gameId);
         if (games[gameId]) {
@@ -52,6 +54,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    //Handle a player placing a monster on the grid
     socket.on('placeMonster', ({ gameId, playerId, row, col, type }) => {
         console.log('Place monster request received:', gameId, playerId, row, col, type);
         const game = games[gameId];
@@ -85,6 +88,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    //Handle moving a monster on the grid
     socket.on('moveMonster', ({ gameId, playerId, oldRow, oldCol, newRow, newCol, type }) => {
         console.log('Move monster request received:', gameId, playerId, oldRow, oldCol, newRow, newCol, type);
         const game = games[gameId];
@@ -119,6 +123,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    //Handle ending the current turn and switching to the next player
     function endTurn(gameId) {
         const game = games[gameId];
         const currentPlayerIndex = game.players.findIndex(player => player.id === game.currentTurn);
@@ -127,24 +132,28 @@ io.on('connection', (socket) => {
         io.to(gameId).emit('turnChanged', game.currentTurn);
     }
 
+    //Handle client disconnection
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
 
+    //Emit updated player statistics
     function updateStats() {
         io.emit('updateStats', playerStats);
     }
 
+    //Generate a unique game ID based on the game name
     function generateGameId(gameName) {
         const randomCode = Math.random().toString(36).substr(2, 9);
         return `${gameName}-${randomCode}`;
     }
 
+    //handle ending the current turn via socket event
     socket.on('endTurn', ({ gameId, playerId }) => {
         endTurn(gameId);
     });
 
-    // Additional function to handle confrontations
+    // Handle monster confrontations and determine the winner
     function handleConfrontation(gameId, row, col, newMonster) {
         const existingMonster = games[gameId].grid[row][col];
 
@@ -182,6 +191,6 @@ io.on('connection', (socket) => {
     }
 });
 
-server.listen(4001, () => {
-    console.log('Listening on port 4001');
+server.listen(3000, () => {
+    console.log('Listening on port 3000');
 });
