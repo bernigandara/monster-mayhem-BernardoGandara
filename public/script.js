@@ -163,11 +163,14 @@ function updatePlayers(players) {
     });
 }
 
-//Update the score display
+// Update the score display
 function updateScores(scores) {
     document.getElementById('player1Score').innerText = `Player 1: ${scores.player1}`;
     document.getElementById('player2Score').innerText = `Player 2: ${scores.player2}`;
+    document.getElementById('player3Score').innerText = `Player 3: ${scores.player3}`;
+    document.getElementById('player4Score').innerText = `Player 4: ${scores.player4}`;
 }
+
 
 //Display game over message
 function displayGameOver(winner) {

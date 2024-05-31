@@ -27,14 +27,13 @@ io.on('connection', (socket) => {
             currentTurn: 'player1'  // Set the initial turn to player1
         };
         playerStats['player1'] = playerStats['player1'] || { won: 0, lost: 0 };
-        scores[gameId] = { player1: 0, player2: 0 }; // Initialize scores
+        scores[gameId] = { player1: 0, player2: 0, player3: 0, player4: 0 }; // Initialize scores
         socket.join(gameId);
         console.log('Game created:', gameId);
         socket.emit('gameCreated', { gameId, gameName, edge: 'top' });
         updateStats();
     });
-
-    //Handle a player joining an existing game
+    
     socket.on('joinGame', ({ playerId, gameId }) => {
         console.log('Join game request received:', playerId, gameId);
         if (games[gameId]) {
@@ -72,6 +71,7 @@ io.on('connection', (socket) => {
             socket.emit('error', 'Game ID not found');
         }
     });
+    
     
 
     //Handle a player placing a monster on the grid
