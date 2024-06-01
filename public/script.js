@@ -36,12 +36,6 @@ document.getElementById('joinGame').addEventListener('click', () => {
     }
 });
 
-
-//Emit an event to end the current turn
-// document.getElementById('switchTurn').addEventListener('click', () => {
-//     socket.emit('endTurn', { gameId, playerId });
-// });
-
 // Handle the 'gameCreated' event from the server
 socket.on('gameCreated', ({ gameId: newGameId, gameName, edge }) => {
     gameId = newGameId;
@@ -184,7 +178,6 @@ function displayGameOver(winner) {
     document.getElementById('switchTurn').disabled = true; // Disable switch turn button
 }
 
-//Prompts the user to place a monster on the board
 //Prompts the user to place a monster on the board
 function placeMonster(row, col) {
     const type = prompt("Enter monster type (vampire, werewolf, ghost):");

@@ -144,7 +144,6 @@ io.on('connection', (socket) => {
     });    
 
     //Handle ending the current turn and switching to the next player
-    //Handle ending the current turn and switching to the next player
     function endTurn(gameId) {
         const game = games[gameId];
         const currentPlayerIndex = game.players.findIndex(player => player.id === game.currentTurn);
