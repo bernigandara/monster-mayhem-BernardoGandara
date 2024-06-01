@@ -163,11 +163,17 @@ function updatePlayers(players) {
 
 // Update the score display
 function updateScores(scores) {
-    document.getElementById('player1Score').innerText = `Player 1: ${scores.player1}`;
-    document.getElementById('player2Score').innerText = `Player 2: ${scores.player2}`;
-    document.getElementById('player3Score').innerText = `Player 3: ${scores.player3}`;
-    document.getElementById('player4Score').innerText = `Player 4: ${scores.player4}`;
+    const player1Score = document.getElementById('player1Score');
+    const player2Score = document.getElementById('player2Score');
+    const player3Score = document.getElementById('player3Score');
+    const player4Score = document.getElementById('player4Score');
+    
+    if (player1Score) player1Score.innerText = `Player 1: ${scores.player1}`;
+    if (player2Score) player2Score.innerText = `Player 2: ${scores.player2}`;
+    if (player3Score) player3Score.innerText = `Player 3: ${scores.player3}`;
+    if (player4Score) player4Score.innerText = `Player 4: ${scores.player4}`;
 }
+
 
 // Display player stats in the stats column
 function updatePlayerStatsDisplay(stats) {
@@ -189,8 +195,35 @@ function displayGameOver(winner) {
         square.removeEventListener('dragover', handleDragOver);
         square.removeEventListener('drop', handleDrop);
     });
-    document.getElementById('switchTurn').disabled = true; // Disable switch turn button
+    
+    // Reset game after a short delay
+    setTimeout(() => {
+        resetGame();
+    }, 5000); // 5-second delay before resetting the game
 }
+
+// Reset the game state
+function resetGame() {
+    socket.emit('resetGame', gameId);
+}
+
+// Handle the 'gameReset' event from the server
+socket.on('gameReset', ({ gameId, players, edge }) => {
+    playerEdge = edge;
+    renderGrid();
+    currentTurn = 'player1';
+    const currentTurnElement = document.getElementById('currentTurn');
+    const currentTurnDisplayElement = document.getElementById('currentTurnDisplay');
+    if (currentTurnElement) {
+        currentTurnElement.innerText = `Current Turn: player1`;
+    }
+    if (currentTurnDisplayElement) {
+        currentTurnDisplayElement.innerText = `Turn: player1`;
+    }
+    updatePlayers(players);
+    updateScores({ player1: 0, player2: 0, player3: 0, player4: 0 }); // Reset scores
+});
+
 
 // Prompts the user to place a monster on the board
 function placeMonster(row, col) {

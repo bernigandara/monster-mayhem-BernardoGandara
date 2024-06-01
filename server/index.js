@@ -17,6 +17,7 @@ io.on('connection', (socket) => {
 
     // Handle the creation of a new game
     socket.on('createGame', ({ playerId, gameName }) => {
+        console.log('Create game request received:', playerId, gameName);
         const gameId = generateGameId(gameName);
         games[gameId] = {
             id: gameId,
@@ -28,11 +29,14 @@ io.on('connection', (socket) => {
         playerStats['player1'] = playerStats['player1'] || { won: 0, lost: 0 };
         scores[gameId] = { player1: 0, player2: 0, player3: 0, player4: 0 }; // Initialize scores
         socket.join(gameId);
+        console.log('Game created:', gameId);
         socket.emit('gameCreated', { gameId, gameName, edge: 'top' });
         updateStats();
     });
 
+    // Handle joining an existing game
     socket.on('joinGame', ({ playerId, gameId }) => {
+        console.log('Join game request received:', playerId, gameId);
         if (games[gameId]) {
             const playerNumber = games[gameId].players.length + 1;
             let edge;
@@ -60,6 +64,7 @@ io.on('connection', (socket) => {
             playerStats[newPlayerId] = playerStats[newPlayerId] || { won: 0, lost: 0 };
             socket.join(gameId);
             io.to(gameId).emit('playerJoined', { gameId, players: games[gameId].players });
+            console.log('Player joined game:', newPlayerId, gameId);
             socket.emit('gameJoined', { gameId, players: games[gameId].players, edge });
             io.to(gameId).emit('turnChanged', games[gameId].currentTurn); // Notify the current turn
             updateStats();
@@ -68,8 +73,9 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Handle a player placing a monster on the grid
+    // Handle placing a monster on the grid
     socket.on('placeMonster', ({ gameId, playerId, row, col, type }) => {
+        console.log('Place monster request received:', gameId, playerId, row, col, type);
         const game = games[gameId];
         if (game && game.players.some(player => player.id === playerId) && game.currentTurn === playerId) {
             const newMonster = { type, playerId };
@@ -86,13 +92,13 @@ io.on('connection', (socket) => {
             } else {
                 game.grid[row][col] = newMonster;
             }
+            console.log('Updated grid:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
 
             // Check for win condition
-            if (scores[gameId][playerId] >= 3) {
+            if (scores[gameId][playerId] >= 10) {
                 io.to(gameId).emit('gameOver', { winner: playerId });
-                updatePlayerStats(gameId, playerId);
             } else {
                 endTurn(gameId);  // Automatically end the turn
             }
@@ -103,6 +109,7 @@ io.on('connection', (socket) => {
 
     // Handle moving a monster on the grid
     socket.on('moveMonster', ({ gameId, playerId, oldRow, oldCol, newRow, newCol, type }) => {
+        console.log('Move monster request received:', gameId, playerId, oldRow, oldCol, newRow, newCol, type);
         const game = games[gameId];
         if (game && game.players.some(player => player.id === playerId) && game.currentTurn === playerId) {
             const newMonster = { type, playerId };
@@ -120,13 +127,13 @@ io.on('connection', (socket) => {
                 game.grid[newRow][newCol] = newMonster;
             }
             game.grid[oldRow][oldCol] = null;
+            console.log('Updated grid after move:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
 
             // Check for win condition
-            if (scores[gameId][playerId] >= 3) {
+            if (scores[gameId][playerId] >= 10) {
                 io.to(gameId).emit('gameOver', { winner: playerId });
-                updatePlayerStats(gameId, playerId);
             } else {
                 endTurn(gameId);  // Automatically end the turn
             }
@@ -138,10 +145,13 @@ io.on('connection', (socket) => {
     // Handle ending the current turn and switching to the next player
     function endTurn(gameId) {
         const game = games[gameId];
-        const currentPlayerIndex = game.players.findIndex(player => player.id === game.currentTurn);
-        const nextPlayerIndex = (currentPlayerIndex + 1) % game.players.length;
-        game.currentTurn = game.players[nextPlayerIndex].id;
-        io.to(gameId).emit('turnChanged', game.currentTurn);
+        if (game) {
+            const currentPlayerIndex = game.players.findIndex(player => player.id === game.currentTurn);
+            const nextPlayerIndex = (currentPlayerIndex + 1) % game.players.length;
+            game.currentTurn = game.players[nextPlayerIndex].id;
+            console.log(`Turn changed: ${game.currentTurn}`);  // Add this line
+            io.to(gameId).emit('turnChanged', game.currentTurn);
+        }
     }
 
     // Handle client disconnection
@@ -149,22 +159,9 @@ io.on('connection', (socket) => {
         console.log('Client disconnected');
     });
 
-    // Update player statistics
+    // Emit updated player statistics
     function updateStats() {
         io.emit('updateStats', playerStats);
-    }
-
-    // Update player stats based on game result
-    function updatePlayerStats(gameId, winnerId) {
-        const game = games[gameId];
-        game.players.forEach(player => {
-            if (player.id === winnerId) {
-                playerStats[winnerId].won++;
-            } else {
-                playerStats[player.id].lost++;
-            }
-        });
-        updateStats();
     }
 
     // Generate a unique game ID based on the game name
@@ -189,23 +186,56 @@ io.on('connection', (socket) => {
 
         const confrontationRules = {
             'vampire': { 'werewolf': 'vampire', 'ghost': 'ghost' },
-            'werewolf': { 'vampire': 'werewolf', 'ghost': 'werewolf' },
-            'ghost': { 'vampire': 'ghost', 'werewolf': 'ghost' }
+            'werewolf': { 'vampire': 'vampire', 'ghost': 'werewolf' },
+            'ghost': { 'vampire': 'ghost', 'werewolf': 'werewolf' }
         };
 
+        console.log(`Confrontation: New Monster (${newMonster.type}) vs Existing Monster (${existingMonster.type})`);
+
         if (newMonster.type === existingMonster.type) {
+            console.log('Both monsters are of the same type. Both will be removed.');
             scores[gameId][newMonster.playerId]++;
             scores[gameId][existingMonster.playerId]++;
             return { removeBoth: true };
         } else {
             const winnerType = confrontationRules[newMonster.type][existingMonster.type];
+            console.log(`Winner type based on rules: ${winnerType}`);
             if (winnerType === newMonster.type) {
+                console.log('New monster wins the confrontation.');
                 scores[gameId][newMonster.playerId]++;
                 return { winner: newMonster };
             } else {
+                console.log('Existing monster wins the confrontation.');
                 scores[gameId][existingMonster.playerId]++;
                 return { winner: existingMonster };
             }
+        }
+    }
+
+    // Handle the game over event
+    socket.on('gameOver', ({ gameId, winner }) => {
+        const game = games[gameId];
+        if (game) {
+            const players = game.players.map(player => player.id);
+            players.forEach(player => {
+                if (player === winner) {
+                    playerStats[player].won++;
+                } else {
+                    playerStats[player].lost++;
+                }
+            });
+            io.to(gameId).emit('gameOver', { winner });
+            resetGame(gameId);
+        }
+    });
+
+    // Reset game state for a new match
+    function resetGame(gameId) {
+        const game = games[gameId];
+        if (game) {
+            game.grid = Array(10).fill().map(() => Array(10).fill(null));
+            game.currentTurn = 'player1'; // Reset turn to player1
+            io.to(gameId).emit('gameReset', { gameId, players: game.players, edge: 'top' });
         }
     }
 });
