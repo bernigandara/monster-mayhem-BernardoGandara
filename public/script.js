@@ -4,7 +4,7 @@ let gameId = null;
 let playerEdge = null;
 let currentTurn = null;
 
-//Register a new user and generate a playerID
+// Register a new user and generate a playerID
 document.getElementById('registerUser').addEventListener('click', () => {
     const username = document.getElementById('username').value;
     if (username) {
@@ -13,7 +13,7 @@ document.getElementById('registerUser').addEventListener('click', () => {
     }
 });
 
-//Create new game using user input for game name
+// Create new game using user input for game name
 document.getElementById('createGame').addEventListener('click', () => {
     const gameName = document.getElementById('gameName').value;
     if (gameName) {
@@ -24,7 +24,7 @@ document.getElementById('createGame').addEventListener('click', () => {
     }
 });
 
-//Join an existing game with the provided gameID
+// Join an existing game with the provided gameID
 document.getElementById('joinGame').addEventListener('click', () => {
     const inputGameId = document.getElementById('gameId').value;
     if (inputGameId) {
@@ -69,13 +69,13 @@ socket.on('gameJoined', ({ gameId: joinedGameId, players, edge }) => {
     updateScores({ player1: 0, player2: 0, player3: 0, player4: 0 }); // Reset scores
 });
 
-//Update player list when a new player joins the game
+// Update player list when a new player joins the game
 socket.on('playerJoined', ({ gameId, players }) => {
     updatePlayers(players);
     updateScores(scores);
 });
 
-//update the game grid
+// Update the game grid
 socket.on('updateGrid', (grid) => {
     renderGrid(grid);
 });
@@ -94,23 +94,27 @@ socket.on('turnChanged', (newTurn) => {
     alert(`Turn switched! Now playing: ${newTurn}`);
 });
 
-
-//Update the scores
+// Update the scores
 socket.on('updateScores', (scores) => {
     updateScores(scores);
 });
 
-//Handles the game over event
+// Handle the game over event
 socket.on('gameOver', ({ winner }) => {
     displayGameOver(winner);
 });
 
-//Generates a unique paler ID using the username
+// Update the player stats
+socket.on('updateStats', (stats) => {
+    updatePlayerStatsDisplay(stats);
+});
+
+// Generate a unique player ID using the username
 function generatePlayerId(username) {
     return `${username}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-//Render the game grid on the board
+// Render the game grid on the board
 function renderGrid(grid) {
     const board = document.getElementById('board');
     board.innerHTML = ''; // Clear the board
@@ -138,7 +142,7 @@ function renderGrid(grid) {
                 } else {
                     alert('You can only place monsters on your edge or it is not your turn!');
                 }
-            });            
+            });
             square.addEventListener('dragover', handleDragOver);
             square.addEventListener('drop', handleDrop);
             board.appendChild(square);
@@ -146,7 +150,7 @@ function renderGrid(grid) {
     }
 }
 
-//Updates the player list
+// Updates the player list
 function updatePlayers(players) {
     const playersDiv = document.getElementById('players');
     playersDiv.innerHTML = '<h3>Players:</h3>';
@@ -165,8 +169,18 @@ function updateScores(scores) {
     document.getElementById('player4Score').innerText = `Player 4: ${scores.player4}`;
 }
 
+// Display player stats in the stats column
+function updatePlayerStatsDisplay(stats) {
+    const statsDiv = document.getElementById('statsColumn');
+    statsDiv.innerHTML = '<h3>Player Stats:</h3>';
+    Object.keys(stats).forEach(playerId => {
+        const playerStatsElement = document.createElement('div');
+        playerStatsElement.textContent = `${playerId} - Wins: ${stats[playerId].won}, Losses: ${stats[playerId].lost}`;
+        statsDiv.appendChild(playerStatsElement);
+    });
+}
 
-//Display game over message
+// Display game over message
 function displayGameOver(winner) {
     alert(`Game Over! The winner is ${winner}`);
     document.getElementById('gameScreen').innerHTML += `<h2>Game Over! The winner is ${winner}</h2>`;
@@ -178,7 +192,7 @@ function displayGameOver(winner) {
     document.getElementById('switchTurn').disabled = true; // Disable switch turn button
 }
 
-//Prompts the user to place a monster on the board
+// Prompts the user to place a monster on the board
 function placeMonster(row, col) {
     const type = prompt("Enter monster type (vampire, werewolf, ghost):");
     if (type === 'vampire' || type === 'werewolf' || type === 'ghost') {
@@ -188,12 +202,12 @@ function placeMonster(row, col) {
     }
 }
 
-//Emits event ot end the current turn
+// Emits event to end the current turn
 function endTurn() {
     socket.emit('endTurn', { gameId, playerId });
 }
 
-//Handles the drag start event for a monster
+// Handles the drag start event for a monster
 function handleDragStart(event) {
     const row = event.target.dataset.row;
     const col = event.target.dataset.col;
@@ -202,7 +216,7 @@ function handleDragStart(event) {
     event.dataTransfer.setData('text/plain', JSON.stringify({ row, col, type, playerId }));
 }
 
-//Handles the dar over event allowing dropping
+// Handles the drag over event allowing dropping
 function handleDragOver(event) {
     event.preventDefault();
 }
@@ -233,7 +247,7 @@ function handleDrop(event) {
     }
 }
 
-//Check if the square is on the player's edge
+// Check if the square is on the player's edge
 function isOnPlayerEdge(playerEdge, row, col) {
     if ((playerEdge === 'top' && row === 0) ||
         (playerEdge === 'bottom' && row === 9) ||
@@ -244,8 +258,7 @@ function isOnPlayerEdge(playerEdge, row, col) {
     return false;
 }
 
-
-//Returns image path for the given monster type
+// Returns image path for the given monster type
 function getMonsterImage(type) {
     switch (type) {
         case 'vampire':
@@ -259,7 +272,7 @@ function getMonsterImage(type) {
     }
 }
 
-//Returns the colour for the given player ID
+// Returns the color for the given player ID
 function getPlayerColor(playerId) {
     const colors = {
         'player1': '#008000', // Green
@@ -273,3 +286,4 @@ function getPlayerColor(playerId) {
         return defaultColors[playerId.charCodeAt(playerId.length - 1) % defaultColors.length];
     }
 }
+

@@ -15,9 +15,8 @@ app.use(express.static('public'));
 io.on('connection', (socket) => {
     console.log('New client connected');
 
-    //Handle the creation of a new game
+    // Handle the creation of a new game
     socket.on('createGame', ({ playerId, gameName }) => {
-        console.log('Create game request received:', playerId, gameName);
         const gameId = generateGameId(gameName);
         games[gameId] = {
             id: gameId,
@@ -29,18 +28,16 @@ io.on('connection', (socket) => {
         playerStats['player1'] = playerStats['player1'] || { won: 0, lost: 0 };
         scores[gameId] = { player1: 0, player2: 0, player3: 0, player4: 0 }; // Initialize scores
         socket.join(gameId);
-        console.log('Game created:', gameId);
         socket.emit('gameCreated', { gameId, gameName, edge: 'top' });
         updateStats();
     });
-    
+
     socket.on('joinGame', ({ playerId, gameId }) => {
-        console.log('Join game request received:', playerId, gameId);
         if (games[gameId]) {
             const playerNumber = games[gameId].players.length + 1;
             let edge;
             let newPlayerId;
-    
+
             switch (playerNumber) {
                 case 2:
                     edge = 'bottom';
@@ -58,12 +55,11 @@ io.on('connection', (socket) => {
                     socket.emit('error', 'Game is full');
                     return;
             }
-    
+
             games[gameId].players.push({ id: newPlayerId, edge });
             playerStats[newPlayerId] = playerStats[newPlayerId] || { won: 0, lost: 0 };
             socket.join(gameId);
             io.to(gameId).emit('playerJoined', { gameId, players: games[gameId].players });
-            console.log('Player joined game:', newPlayerId, gameId);
             socket.emit('gameJoined', { gameId, players: games[gameId].players, edge });
             io.to(gameId).emit('turnChanged', games[gameId].currentTurn); // Notify the current turn
             updateStats();
@@ -71,12 +67,9 @@ io.on('connection', (socket) => {
             socket.emit('error', 'Game ID not found');
         }
     });
-    
-    
 
-    //Handle a player placing a monster on the grid
+    // Handle a player placing a monster on the grid
     socket.on('placeMonster', ({ gameId, playerId, row, col, type }) => {
-        console.log('Place monster request received:', gameId, playerId, row, col, type);
         const game = games[gameId];
         if (game && game.players.some(player => player.id === playerId) && game.currentTurn === playerId) {
             const newMonster = { type, playerId };
@@ -93,24 +86,23 @@ io.on('connection', (socket) => {
             } else {
                 game.grid[row][col] = newMonster;
             }
-            console.log('Updated grid:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
-    
+
             // Check for win condition
-            if (scores[gameId][playerId] >= 10) {
+            if (scores[gameId][playerId] >= 3) {
                 io.to(gameId).emit('gameOver', { winner: playerId });
+                updatePlayerStats(gameId, playerId);
             } else {
                 endTurn(gameId);  // Automatically end the turn
             }
         } else {
             socket.emit('alert', 'It is not your turn!');
         }
-    });    
+    });
 
-    //Handle moving a monster on the grid
+    // Handle moving a monster on the grid
     socket.on('moveMonster', ({ gameId, playerId, oldRow, oldCol, newRow, newCol, type }) => {
-        console.log('Move monster request received:', gameId, playerId, oldRow, oldCol, newRow, newCol, type);
         const game = games[gameId];
         if (game && game.players.some(player => player.id === playerId) && game.currentTurn === playerId) {
             const newMonster = { type, playerId };
@@ -128,49 +120,60 @@ io.on('connection', (socket) => {
                 game.grid[newRow][newCol] = newMonster;
             }
             game.grid[oldRow][oldCol] = null;
-            console.log('Updated grid after move:', game.grid);
             io.to(gameId).emit('updateGrid', game.grid);
             io.to(gameId).emit('updateScores', scores[gameId]); // Emit updated scores
-    
+
             // Check for win condition
-            if (scores[gameId][playerId] >= 10) {
+            if (scores[gameId][playerId] >= 3) {
                 io.to(gameId).emit('gameOver', { winner: playerId });
+                updatePlayerStats(gameId, playerId);
             } else {
                 endTurn(gameId);  // Automatically end the turn
             }
         } else {
             socket.emit('alert', 'It is not your turn!');
         }
-    });    
+    });
 
-    //Handle ending the current turn and switching to the next player
+    // Handle ending the current turn and switching to the next player
     function endTurn(gameId) {
         const game = games[gameId];
         const currentPlayerIndex = game.players.findIndex(player => player.id === game.currentTurn);
         const nextPlayerIndex = (currentPlayerIndex + 1) % game.players.length;
         game.currentTurn = game.players[nextPlayerIndex].id;
-        console.log(`Turn changed: ${game.currentTurn}`);  // Add this line
         io.to(gameId).emit('turnChanged', game.currentTurn);
     }
 
-
-    //Handle client disconnection
+    // Handle client disconnection
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
 
-    //Emit updated player statistics
+    // Update player statistics
     function updateStats() {
         io.emit('updateStats', playerStats);
     }
 
-    //Generate a unique game ID based on the game name
+    // Update player stats based on game result
+    function updatePlayerStats(gameId, winnerId) {
+        const game = games[gameId];
+        game.players.forEach(player => {
+            if (player.id === winnerId) {
+                playerStats[winnerId].won++;
+            } else {
+                playerStats[player.id].lost++;
+            }
+        });
+        updateStats();
+    }
+
+    // Generate a unique game ID based on the game name
     function generateGameId(gameName) {
         const randomCode = Math.random().toString(36).substr(2, 9);
         return `${gameName}-${randomCode}`;
     }
 
-    //handle ending the current turn via socket event
+    // Handle ending the current turn via socket event
     socket.on('endTurn', ({ gameId, playerId }) => {
         endTurn(gameId);
     });
@@ -186,26 +189,20 @@ io.on('connection', (socket) => {
 
         const confrontationRules = {
             'vampire': { 'werewolf': 'vampire', 'ghost': 'ghost' },
-            'werewolf': { 'vampire': 'vampire', 'ghost': 'werewolf' },
-            'ghost': { 'vampire': 'ghost', 'werewolf': 'werewolf' }
+            'werewolf': { 'vampire': 'werewolf', 'ghost': 'werewolf' },
+            'ghost': { 'vampire': 'ghost', 'werewolf': 'ghost' }
         };
 
-        console.log(`Confrontation: New Monster (${newMonster.type}) vs Existing Monster (${existingMonster.type})`);
-
         if (newMonster.type === existingMonster.type) {
-            console.log('Both monsters are of the same type. Both will be removed.');
             scores[gameId][newMonster.playerId]++;
             scores[gameId][existingMonster.playerId]++;
             return { removeBoth: true };
         } else {
             const winnerType = confrontationRules[newMonster.type][existingMonster.type];
-            console.log(`Winner type based on rules: ${winnerType}`);
             if (winnerType === newMonster.type) {
-                console.log('New monster wins the confrontation.');
                 scores[gameId][newMonster.playerId]++;
                 return { winner: newMonster };
             } else {
-                console.log('Existing monster wins the confrontation.');
                 scores[gameId][existingMonster.playerId]++;
                 return { winner: existingMonster };
             }
